@@ -26,6 +26,9 @@ dev = [
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+markers = [
+  "integration: integration tests that require a real PostgreSQL database",
+]
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]

@@ -68,6 +68,12 @@ Required fields for reply delivery:
 Run smoke tests:
 - `pytest`
 
+Run integration tests (real PostgreSQL required):
+- `TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/teams_dispatcher pytest -m integration`
+- `pytest -m "not integration"`
+
+Integration tests are skipped automatically if `TEST_DATABASE_URL` is not set.
+
 ## Seq Validation
 1. Set Seq configuration in `.env`:
    - `SEQ_URL=http://<seq-host>:5341`
