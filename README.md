@@ -86,5 +86,19 @@ Expected structured fields in logs:
 - `final_status`
 - `graph_message_id`
 
+## Repeatable Runtime Validation
+Run the automated validation flow:
+
+```bash
+scripts/validate_runtime.sh \
+   --team-id "<team_id>" \
+   --channel-id "<channel_id>" \
+   --conversation-id "<conversation_id>" \
+   --reply-to-message-id "<reply_to_message_id>"
+```
+
+Checklist and evidence template:
+- `docs/runtime-validation-checklist.md`
+
 ## Next Phases
 - Runtime validation and container hardening
