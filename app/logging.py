@@ -15,6 +15,31 @@ from app.config import Settings
 class JsonFormatter(logging.Formatter):
     """Format log records as newline-delimited JSON."""
 
+    _reserved_keys = {
+        "args",
+        "asctime",
+        "created",
+        "exc_info",
+        "exc_text",
+        "filename",
+        "funcName",
+        "levelname",
+        "levelno",
+        "lineno",
+        "module",
+        "msecs",
+        "message",
+        "msg",
+        "name",
+        "pathname",
+        "process",
+        "processName",
+        "relativeCreated",
+        "stack_info",
+        "thread",
+        "threadName",
+    }
+
     def format(self, record: logging.LogRecord) -> str:
         log_entry: dict[str, Any] = {
             "timestamp": datetime.now(tz=timezone.utc).isoformat(),
@@ -29,6 +54,12 @@ class JsonFormatter(logging.Formatter):
         correlation_id = getattr(record, "correlation_id", None)
         if correlation_id:
             log_entry["correlation_id"] = correlation_id
+
+        for key, value in record.__dict__.items():
+            if key in self._reserved_keys:
+                continue
+            if key not in log_entry:
+                log_entry[key] = value
 
         return json.dumps(log_entry, ensure_ascii=True)
 
@@ -57,3 +88,12 @@ def configure_logging(settings: Settings) -> None:
             batch_size=10,
             auto_flush_timeout=2,
         )
+
+    logging.getLogger(__name__).info(
+        "Logging configured",
+        extra={
+            "correlation_id": "system",
+            "seq_enabled": bool(settings.seq_url),
+            "log_level": settings.log_level.upper(),
+        },
+    )

@@ -31,6 +31,14 @@ class DispatchService:
 
 		existing = self._repository.get_by_correlation_id(self._session, payload.correlation_id)
 		if existing is not None:
+			logger.info(
+				"Dispatch replay detected",
+				extra={
+					"correlation_id": payload.correlation_id,
+					"dispatch_id": existing.id,
+					"status": existing.status.value,
+				},
+			)
 			return existing, False
 
 		try:
@@ -43,6 +51,14 @@ class DispatchService:
 				adaptive_card=payload.adaptive_card,
 			)
 			self._session.commit()
+			logger.info(
+				"Dispatch created",
+				extra={
+					"correlation_id": created.correlation_id,
+					"dispatch_id": created.id,
+					"status": created.status.value,
+				},
+			)
 			return created, True
 		except IntegrityError:
 			# Another request could have inserted the same correlation id concurrently.
@@ -50,6 +66,14 @@ class DispatchService:
 			replay = self._repository.get_by_correlation_id(self._session, payload.correlation_id)
 			if replay is None:
 				raise
+			logger.info(
+				"Dispatch replay detected after integrity race",
+				extra={
+					"correlation_id": payload.correlation_id,
+					"dispatch_id": replay.id,
+					"status": replay.status.value,
+				},
+			)
 			return replay, False
 
 
@@ -88,6 +112,14 @@ class DispatchProcessingService:
 		try:
 			self._repository.mark_processing(dispatch)
 			self._session.commit()
+			logger.info(
+				"Dispatch moved to processing",
+				extra={
+					"correlation_id": dispatch.correlation_id,
+					"dispatch_id": dispatch.id,
+					"status": dispatch.status.value,
+				},
+			)
 
 			result = self._graph_client.send_adaptive_card_reply(
 				team_id=dispatch.team_id,
@@ -106,6 +138,8 @@ class DispatchProcessingService:
 				extra={
 					"correlation_id": dispatch.correlation_id,
 					"dispatch_id": dispatch.id,
+					"status": dispatch.status.value,
+					"graph_message_id": dispatch.graph_message_id,
 				},
 			)
 		except GraphApiError as exc:
@@ -152,13 +186,14 @@ class DispatchProcessingService:
 				"retry_count": refreshed.retry_count,
 				"retriable": retriable,
 				"final_status": refreshed.status.value,
+				"last_error": refreshed.last_error,
 			},
 		)
 
 
 def calculate_retry_delay_seconds(retry_count: int) -> int:
-	"""Return exponential backoff delay capped at five minutes."""
+    """Return exponential backoff delay capped at five minutes."""
 
-	base_delay = 5
-	delay = base_delay * (2 ** max(retry_count - 1, 0))
-	return min(delay, 300)
+    base_delay = 5
+    delay = base_delay * (2 ** max(retry_count - 1, 0))
+    return min(delay, 300)

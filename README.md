@@ -36,6 +36,24 @@ This repository currently includes the baseline implementation:
 Run smoke tests:
 - `pytest`
 
+## Seq Validation
+1. Set Seq configuration in `.env`:
+   - `SEQ_URL=http://<seq-host>:5341`
+   - `SEQ_API_KEY=<optional-api-key>`
+2. Start services:
+   - `docker compose up --build`
+3. Trigger ingestion:
+   - `curl -X POST http://localhost:8000/teams/adaptive-card -H 'Content-Type: application/json' -d '{"teamId":"team-1","channelId":"channel-1","replyToMessageId":"msg-1","adaptiveCard":{"type":"AdaptiveCard","version":"1.4","body":[]},"correlationId":"corr-obs-1"}'`
+4. In Seq, filter by `correlation_id = 'corr-obs-1'` and confirm lifecycle logs.
+
+Expected structured fields in logs:
+- `correlation_id`
+- `dispatch_id`
+- `status`
+- `retry_count`
+- `final_status`
+- `graph_message_id`
+
 ## Next Phases
 - Persistence model and Alembic migrations
 - Dispatch endpoint with idempotency

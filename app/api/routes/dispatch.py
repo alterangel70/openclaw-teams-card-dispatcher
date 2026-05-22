@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
@@ -11,13 +13,14 @@ from app.schemas.dispatch import DispatchCreateRequest, DispatchResponse
 from app.services.dispatch_service import DispatchService
 
 router = APIRouter(prefix="/teams", tags=["dispatch"])
+logger = logging.getLogger(__name__)
 
 
 def get_dispatch_service(session: Session = Depends(get_db_session)) -> DispatchService:
-	"""Build a dispatch service instance for request handlers."""
+    """Build a dispatch service instance for request handlers."""
 
-	repository = DispatchRepository()
-	return DispatchService(session=session, repository=repository)
+    repository = DispatchRepository()
+    return DispatchService(session=session, repository=repository)
 
 
 @router.post(
@@ -27,9 +30,9 @@ def get_dispatch_service(session: Session = Depends(get_db_session)) -> Dispatch
 	status_code=status.HTTP_202_ACCEPTED,
 )
 def create_adaptive_card_dispatch(
-	payload: DispatchCreateRequest,
-	response: Response,
-	service: DispatchService = Depends(get_dispatch_service),
+    payload: DispatchCreateRequest,
+    response: Response,
+    service: DispatchService = Depends(get_dispatch_service),
 ) -> DispatchResponse:
 	"""Create a pending dispatch record and enforce idempotency by correlation id."""
 
@@ -37,4 +40,14 @@ def create_adaptive_card_dispatch(
 	if not created:
 		response.status_code = status.HTTP_200_OK
 
+	logger.info(
+		"Dispatch ingestion completed",
+		extra={
+			"correlation_id": payload.correlation_id,
+			"dispatch_id": dispatch.id,
+			"status": dispatch.status.value,
+			"idempotent_replay": not created,
+			"http_status": response.status_code,
+		},
+	)
 	return DispatchResponse.from_model(dispatch)
