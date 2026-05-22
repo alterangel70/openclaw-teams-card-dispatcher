@@ -1,0 +1,32 @@
+[project]
+name = "teams-card-dispatcher"
+version = "0.1.0"
+description = "Service to dispatch Adaptive Cards to Microsoft Teams"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "alembic>=1.13.2",
+  "fastapi>=0.115.0",
+  "httpx>=0.28.0",
+  "msal>=1.31.0",
+  "pydantic-settings>=2.6.0",
+  "psycopg[binary]>=3.2.0",
+  "seqlog>=0.3.30",
+  "sqlalchemy>=2.0.35",
+  "uvicorn[standard]>=0.32.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3.0",
+  "pytest-asyncio>=0.24.0",
+  "ruff>=0.7.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
