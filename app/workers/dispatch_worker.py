@@ -8,6 +8,11 @@ import time
 from dataclasses import dataclass
 
 from app.config import Settings
+from app.db.session import SessionLocal
+from app.repositories.dispatch_repository import DispatchRepository
+from app.services.dispatch_service import DispatchProcessingService
+from app.services.graph_client import GraphClient
+from app.services.token_provider import MsalTokenProvider
 
 logger = logging.getLogger(__name__)
 
@@ -34,13 +39,16 @@ def install_signal_handlers(runtime: WorkerRuntime) -> None:
 
 
 def run_dispatch_worker(settings: Settings) -> None:
-    """Run the worker polling loop.
-
-    This phase only emits heartbeat logs. Dispatch processing is implemented in later phases.
-    """
+    """Run worker polling loop and process pending dispatches in sequential batches."""
 
     runtime = WorkerRuntime()
     install_signal_handlers(runtime)
+    token_provider = MsalTokenProvider(settings)
+    graph_client = GraphClient(
+        token_provider=token_provider,
+        timeout_seconds=settings.graph_timeout_seconds,
+    )
+    repository = DispatchRepository()
 
     logger.info(
         "Worker started",
@@ -52,10 +60,30 @@ def run_dispatch_worker(settings: Settings) -> None:
     )
 
     while not runtime.should_stop:
-        logger.info(
-            "Worker heartbeat",
-            extra={"correlation_id": "worker"},
-        )
+        try:
+            with SessionLocal() as session:
+                service = DispatchProcessingService(
+                    session,
+                    repository,
+                    graph_client=graph_client,
+                    max_retries=settings.max_retries,
+                )
+                processed_count = service.process_pending_batch(batch_size=settings.worker_batch_size)
+                logger.info(
+                    "Worker cycle complete",
+                    extra={
+                        "processed_count": processed_count,
+                        "correlation_id": "worker",
+                    },
+                )
+        except Exception as exc:
+            logger.exception(
+                "Worker cycle failed",
+                extra={
+                    "error": str(exc),
+                    "correlation_id": "worker",
+                },
+            )
         time.sleep(settings.worker_poll_interval_seconds)
 
     logger.info("Worker stopped gracefully", extra={"correlation_id": "worker"})
