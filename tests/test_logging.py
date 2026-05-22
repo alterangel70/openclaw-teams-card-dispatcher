@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import json
 import logging
+from unittest.mock import patch
 
+from app.config import Settings
 from app.logging import JsonFormatter
+from app.logging import configure_logging
 
 
 def test_json_formatter_includes_standard_fields() -> None:
@@ -48,3 +51,18 @@ def test_json_formatter_includes_structured_extras() -> None:
     assert payload["dispatch_id"] == 42
     assert payload["retry_count"] == 2
     assert payload["final_status"] == "PENDING"
+
+
+def test_configure_logging_adds_seq_handler_when_seq_enabled() -> None:
+    root_logger = logging.getLogger()
+    for handler in list(root_logger.handlers):
+        root_logger.removeHandler(handler)
+
+    seq_handler = logging.NullHandler()
+    settings = Settings(SEQ_URL="http://seq.local:5341", SEQ_API_KEY="test-key")
+
+    with patch("app.logging.seqlog.log_to_seq", return_value=seq_handler) as log_to_seq_mock:
+        configure_logging(settings)
+
+    assert log_to_seq_mock.called
+    assert any(handler is seq_handler for handler in root_logger.handlers)

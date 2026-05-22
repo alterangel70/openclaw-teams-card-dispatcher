@@ -80,14 +80,19 @@ def configure_logging(settings: Settings) -> None:
     root_logger.addHandler(console_handler)
 
     if settings.seq_url:
-        seqlog.log_to_seq(
+        seq_handler = seqlog.log_to_seq(
             server_url=settings.seq_url,
             api_key=settings.seq_api_key.get_secret_value() if settings.seq_api_key else None,
             level=level,
             override_root_logger=False,
             batch_size=10,
             auto_flush_timeout=2,
+            support_extra_properties=True,
+            use_clef=True,
         )
+        # seqlog does not attach to root logger unless override_root_logger=True.
+        # We keep root formatting and append Seq as an additional sink.
+        root_logger.addHandler(seq_handler)
 
     logging.getLogger(__name__).info(
         "Logging configured",
