@@ -61,6 +61,7 @@ class DispatchRepository:
 		correlation_id: str,
 		team_id: str,
 		channel_id: str,
+		conversation_id: str,
 		reply_to_message_id: str,
 		adaptive_card: dict,
 	) -> AdaptiveCardDispatch:
@@ -70,6 +71,7 @@ class DispatchRepository:
 			correlation_id=correlation_id,
 			team_id=team_id,
 			channel_id=channel_id,
+			conversation_id=conversation_id,
 			reply_to_message_id=reply_to_message_id,
 			adaptive_card_json=adaptive_card,
 			status=DispatchStatus.PENDING,
@@ -81,13 +83,19 @@ class DispatchRepository:
 		return dispatch
 
 	def mark_processing(self, dispatch: AdaptiveCardDispatch) -> None:
-		"""Set record state to PROCESSING before Graph call."""
+		"""Set record state to PROCESSING before delivery call."""
 
 		dispatch.status = DispatchStatus.PROCESSING
 		dispatch.last_error = None
 
-	def mark_sent(self, dispatch: AdaptiveCardDispatch, *, graph_message_id: str, sent_at: datetime) -> None:
-		"""Set record state to SENT when Graph send succeeds."""
+	def mark_sent(
+		self,
+		dispatch: AdaptiveCardDispatch,
+		*,
+		graph_message_id: str | None,
+		sent_at: datetime,
+	) -> None:
+		"""Set record state to SENT when delivery succeeds."""
 
 		dispatch.status = DispatchStatus.SENT
 		dispatch.graph_message_id = graph_message_id

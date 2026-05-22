@@ -11,8 +11,8 @@ from app.config import Settings
 from app.db.session import SessionLocal
 from app.repositories.dispatch_repository import DispatchRepository
 from app.services.dispatch_service import DispatchProcessingService
-from app.services.graph_client import GraphClient
-from app.services.token_provider import MsalTokenProvider
+from app.services.teams_bot_client import TeamsBotClient
+from app.services.token_provider import BotTokenProvider
 
 logger = logging.getLogger(__name__)
 
@@ -43,10 +43,12 @@ def run_dispatch_worker(settings: Settings) -> None:
 
     runtime = WorkerRuntime()
     install_signal_handlers(runtime)
-    token_provider = MsalTokenProvider(settings)
-    graph_client = GraphClient(
+    token_provider = BotTokenProvider(settings)
+    delivery_client = TeamsBotClient(
         token_provider=token_provider,
-        timeout_seconds=settings.graph_timeout_seconds,
+        service_url=settings.teams_service_url,
+        bot_app_id=settings.bot_app_id,
+        bot_name=settings.bot_name,
     )
     repository = DispatchRepository()
 
@@ -65,7 +67,7 @@ def run_dispatch_worker(settings: Settings) -> None:
                 service = DispatchProcessingService(
                     session,
                     repository,
-                    graph_client=graph_client,
+                    delivery_client=delivery_client,
                     max_retries=settings.max_retries,
                 )
                 processed_count = service.process_pending_batch(batch_size=settings.worker_batch_size)

@@ -1,4 +1,4 @@
-"""Token provider implementation for Microsoft Graph app-only auth."""
+"""Token provider implementations for Bot Framework and related integrations."""
 
 from __future__ import annotations
 
@@ -9,25 +9,27 @@ from msal import ConfidentialClientApplication
 
 from app.config import Settings
 
+BOT_FRAMEWORK_SCOPE = "https://api.botframework.com/.default"
+
 
 class AccessTokenProvider(Protocol):
-	"""Protocol for components that can provide a Graph bearer token."""
+	"""Protocol for components that can provide bearer tokens."""
 
 	def get_access_token(self) -> str:
-		"""Return a valid bearer token for Graph API requests."""
+		"""Return a valid bearer token for outbound API requests."""
 
 
-class MsalTokenProvider:
-	"""MSAL-based token provider using OAuth client credentials flow."""
+class BotTokenProvider:
+	"""MSAL-based token provider for Azure Bot Framework OAuth."""
 
 	def __init__(self, settings: Settings) -> None:
 		self._settings = settings
 		self._validate_required_settings()
 
-		self._authority = f"https://login.microsoftonline.com/{settings.graph_tenant_id}"
+		self._authority = f"https://login.microsoftonline.com/{settings.bot_tenant_id}"
 		self._client = ConfidentialClientApplication(
-			client_id=settings.graph_client_id,
-			client_credential=settings.graph_client_secret.get_secret_value(),
+			client_id=settings.bot_app_id,
+			client_credential=settings.bot_app_password.get_secret_value(),
 			authority=self._authority,
 		)
 
@@ -40,7 +42,7 @@ class MsalTokenProvider:
 		if self._is_cached_token_valid():
 			return self._cached_token  # type: ignore[return-value]
 
-		result = self._client.acquire_token_for_client(scopes=[self._settings.graph_scope])
+		result = self._client.acquire_token_for_client(scopes=[BOT_FRAMEWORK_SCOPE])
 		access_token = result.get("access_token")
 		if not access_token:
 			error_description = result.get("error_description") or "Token acquisition failed"
@@ -60,17 +62,21 @@ class MsalTokenProvider:
 		return datetime.now(timezone.utc) < self._expires_at
 
 	def _validate_required_settings(self) -> None:
-		"""Ensure Graph auth configuration is present before provider initialization."""
+		"""Ensure Bot auth configuration is present before provider initialization."""
 
 		missing_fields: list[str] = []
-		if not self._settings.graph_tenant_id:
-			missing_fields.append("GRAPH_TENANT_ID")
-		if not self._settings.graph_client_id:
-			missing_fields.append("GRAPH_CLIENT_ID")
-		if not self._settings.graph_client_secret.get_secret_value():
-			missing_fields.append("GRAPH_CLIENT_SECRET")
+		if not self._settings.bot_tenant_id:
+			missing_fields.append("BOT_TENANT_ID")
+		if not self._settings.bot_app_id:
+			missing_fields.append("BOT_APP_ID")
+		if not self._settings.bot_app_password.get_secret_value():
+			missing_fields.append("BOT_APP_PASSWORD")
 
 		if missing_fields:
 			raise ValueError(
-				"Missing required Graph auth settings: " + ", ".join(missing_fields),
+				"Missing required Bot auth settings: " + ", ".join(missing_fields),
 			)
+
+
+class MsalTokenProvider(BotTokenProvider):
+	"""Backward-compatible alias; use BotTokenProvider for new code."""

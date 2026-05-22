@@ -2,12 +2,12 @@
 
 from functools import lru_cache
 
-from pydantic import Field, SecretStr
+from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Strongly typed settings for API, worker, Graph, and observability."""
+    """Strongly typed settings for API, worker, bot delivery, and observability."""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -34,11 +34,15 @@ class Settings(BaseSettings):
     worker_batch_size: int = Field(default=50, alias="WORKER_BATCH_SIZE")
     max_retries: int = Field(default=3, alias="MAX_RETRIES")
 
-    graph_tenant_id: str = Field(default="", alias="GRAPH_TENANT_ID")
-    graph_client_id: str = Field(default="", alias="GRAPH_CLIENT_ID")
-    graph_client_secret: SecretStr = Field(default=SecretStr(""), alias="GRAPH_CLIENT_SECRET")
-    graph_scope: str = Field(default="https://graph.microsoft.com/.default", alias="GRAPH_SCOPE")
-    graph_timeout_seconds: int = Field(default=20, alias="GRAPH_TIMEOUT_SECONDS")
+    bot_app_id: str = Field(default="", alias="BOT_APP_ID")
+    bot_app_password: SecretStr = Field(default=SecretStr(""), alias="BOT_APP_PASSWORD")
+    bot_tenant_id: str = Field(default="", alias="BOT_TENANT_ID")
+    teams_service_url: str = Field(
+        default="",
+        alias="TEAMS_SERVICE_URL",
+        validation_alias=AliasChoices("TEAMS_SERVICE_URL", "BOT_SERVICE_URL"),
+    )
+    bot_name: str = Field(default="OpenClaw Bot", alias="BOT_NAME")
 
     seq_url: str | None = Field(default=None, alias="SEQ_URL")
     seq_api_key: SecretStr | None = Field(default=None, alias="SEQ_API_KEY")

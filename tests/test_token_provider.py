@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.config import Settings
-from app.services.token_provider import MsalTokenProvider
+from app.services.token_provider import BotTokenProvider
 
 
 class FakeMsalClient:
@@ -21,14 +21,14 @@ class FakeMsalClient:
 
 def _settings() -> Settings:
     return Settings(
-        GRAPH_TENANT_ID="tenant-id",
-        GRAPH_CLIENT_ID="client-id",
-        GRAPH_CLIENT_SECRET="secret-value",
+        BOT_TENANT_ID="tenant-id",
+        BOT_APP_ID="client-id",
+        BOT_APP_PASSWORD="secret-value",
     )
 
 
 def test_get_access_token_uses_cache() -> None:
-    provider = MsalTokenProvider(_settings())
+    provider = BotTokenProvider(_settings())
     fake_client = FakeMsalClient()
     provider._client = fake_client  # type: ignore[attr-defined]
 
@@ -40,11 +40,11 @@ def test_get_access_token_uses_cache() -> None:
     assert fake_client.calls == 1
 
 
-def test_missing_graph_settings_raises_error() -> None:
+def test_missing_bot_settings_raises_error() -> None:
     try:
-        MsalTokenProvider(Settings())
+        BotTokenProvider(Settings())
         raise AssertionError("Expected ValueError to be raised")
     except ValueError as exc:
-        assert "GRAPH_TENANT_ID" in str(exc)
-        assert "GRAPH_CLIENT_ID" in str(exc)
-        assert "GRAPH_CLIENT_SECRET" in str(exc)
+        assert "BOT_TENANT_ID" in str(exc)
+        assert "BOT_APP_ID" in str(exc)
+        assert "BOT_APP_PASSWORD" in str(exc)

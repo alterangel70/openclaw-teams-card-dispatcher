@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 from app.models.dispatch import DispatchStatus
+from app.services.delivery_client import DeliveryResult
 from app.services.dispatch_service import DispatchProcessingService, calculate_retry_delay_seconds
-from app.services.graph_client import GraphApiError, GraphSendResult
 
 
 @dataclass
@@ -14,6 +14,7 @@ class FakeDispatch:
     correlation_id: str
     team_id: str
     channel_id: str
+    conversation_id: str
     reply_to_message_id: str
     adaptive_card_json: dict
     status: DispatchStatus
@@ -86,17 +87,17 @@ class FakeRepository:
         dispatch.next_attempt_at = None
 
 
-class SuccessGraphClient:
-    def send_adaptive_card_reply(self, **_kwargs) -> GraphSendResult:
-        return GraphSendResult(graph_message_id="graph-message-1")
+class SuccessDeliveryClient:
+    def send_adaptive_card(self, **_kwargs) -> DeliveryResult:
+        return DeliveryResult(success=True, message_id="activity-1")
 
 
-class FailureGraphClient:
+class FailureDeliveryClient:
     def __init__(self, retriable: bool) -> None:
         self._retriable = retriable
 
-    def send_adaptive_card_reply(self, **_kwargs) -> GraphSendResult:
-        raise GraphApiError("Graph send failed", retriable=self._retriable, status_code=503)
+    def send_adaptive_card(self, **_kwargs) -> DeliveryResult:
+        return DeliveryResult(success=False, error_message="Delivery failed", retriable=self._retriable)
 
 
 def _pending_dispatch(retry_count: int = 0) -> FakeDispatch:
@@ -105,6 +106,7 @@ def _pending_dispatch(retry_count: int = 0) -> FakeDispatch:
         correlation_id="corr-1",
         team_id="team-1",
         channel_id="channel-1",
+        conversation_id="conversation-1",
         reply_to_message_id="msg-1",
         adaptive_card_json={"type": "AdaptiveCard", "version": "1.4"},
         status=DispatchStatus.PENDING,
@@ -119,7 +121,7 @@ def test_process_pending_batch_marks_sent_on_success() -> None:
     service = DispatchProcessingService(
         session,
         repository,
-        graph_client=SuccessGraphClient(),
+        delivery_client=SuccessDeliveryClient(),
         max_retries=3,
     )
 
@@ -127,7 +129,7 @@ def test_process_pending_batch_marks_sent_on_success() -> None:
 
     assert processed == 1
     assert dispatch.status == DispatchStatus.SENT
-    assert dispatch.graph_message_id == "graph-message-1"
+    assert dispatch.graph_message_id == "activity-1"
     assert dispatch.sent_at is not None
 
 
@@ -138,7 +140,7 @@ def test_process_pending_batch_retries_when_failure_and_retries_left() -> None:
     service = DispatchProcessingService(
         session,
         repository,
-        graph_client=FailureGraphClient(retriable=True),
+        delivery_client=FailureDeliveryClient(retriable=True),
         max_retries=3,
     )
 
@@ -159,7 +161,7 @@ def test_process_pending_batch_marks_failed_at_max_retries() -> None:
     service = DispatchProcessingService(
         session,
         repository,
-        graph_client=FailureGraphClient(retriable=False),
+        delivery_client=FailureDeliveryClient(retriable=False),
         max_retries=3,
     )
 

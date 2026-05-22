@@ -42,6 +42,7 @@ class AdaptiveCardDispatch(Base):
 	correlation_id: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
 	team_id: Mapped[str] = mapped_column(String(128), nullable=False)
 	channel_id: Mapped[str] = mapped_column(String(128), nullable=False)
+	conversation_id: Mapped[str] = mapped_column(String(128), nullable=False)
 	reply_to_message_id: Mapped[str] = mapped_column(String(128), nullable=False)
 	adaptive_card_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
 	status: Mapped[DispatchStatus] = mapped_column(

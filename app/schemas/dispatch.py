@@ -17,6 +17,7 @@ class DispatchCreateRequest(BaseModel):
 
 	team_id: str = Field(min_length=1, max_length=128, alias="teamId")
 	channel_id: str = Field(min_length=1, max_length=128, alias="channelId")
+	conversation_id: str = Field(min_length=1, max_length=128, alias="conversationId")
 	reply_to_message_id: str = Field(min_length=1, max_length=128, alias="replyToMessageId")
 	adaptive_card: dict[str, Any] = Field(alias="adaptiveCard")
 	correlation_id: str = Field(min_length=1, max_length=128, alias="correlationId")

@@ -40,6 +40,7 @@ def _valid_payload() -> dict:
     return {
         "teamId": "team-123",
         "channelId": "channel-123",
+        "conversationId": "conversation-123",
         "replyToMessageId": "message-123",
         "adaptiveCard": {"type": "AdaptiveCard", "version": "1.4", "body": []},
         "correlationId": "corr-123",
@@ -86,6 +87,22 @@ def test_create_dispatch_returns_422_for_invalid_payload() -> None:
 
     invalid_payload = _valid_payload()
     invalid_payload.pop("teamId")
+
+    try:
+        with TestClient(app) as client:
+            response = client.post("/teams/adaptive-card", json=invalid_payload)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 422
+
+
+def test_create_dispatch_returns_422_when_conversation_id_missing() -> None:
+    fake_service = FakeDispatchService()
+    app.dependency_overrides[get_dispatch_service] = lambda: fake_service
+
+    invalid_payload = _valid_payload()
+    invalid_payload.pop("conversationId")
 
     try:
         with TestClient(app) as client:
