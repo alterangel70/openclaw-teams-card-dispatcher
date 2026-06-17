@@ -59,16 +59,18 @@ class DispatchRepository:
 		session: Session,
 		*,
 		correlation_id: str,
-		team_id: str,
-		channel_id: str,
+		conversation_type: str,
 		conversation_id: str,
-		reply_to_message_id: str,
 		adaptive_card: dict,
+		team_id: str | None = None,
+		channel_id: str | None = None,
+		reply_to_message_id: str | None = None,
 	) -> AdaptiveCardDispatch:
 		"""Create a new pending dispatch record."""
 
 		dispatch = AdaptiveCardDispatch(
 			correlation_id=correlation_id,
+			conversation_type=conversation_type,
 			team_id=team_id,
 			channel_id=channel_id,
 			conversation_id=conversation_id,

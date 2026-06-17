@@ -30,9 +30,11 @@ class Settings(BaseSettings):
     worker_poll_interval_seconds: int = Field(
         default=5,
         alias="WORKER_POLL_INTERVAL_SECONDS",
+        ge=1,
+        le=300,
     )
-    worker_batch_size: int = Field(default=50, alias="WORKER_BATCH_SIZE")
-    max_retries: int = Field(default=3, alias="MAX_RETRIES")
+    worker_batch_size: int = Field(default=50, alias="WORKER_BATCH_SIZE", ge=1, le=500)
+    max_retries: int = Field(default=3, alias="MAX_RETRIES", ge=1, le=10)
 
     bot_app_id: str = Field(default="", alias="BOT_APP_ID")
     bot_app_password: SecretStr = Field(default=SecretStr(""), alias="BOT_APP_PASSWORD")
@@ -41,6 +43,12 @@ class Settings(BaseSettings):
         default="",
         alias="TEAMS_SERVICE_URL",
         validation_alias=AliasChoices("TEAMS_SERVICE_URL", "BOT_SERVICE_URL"),
+    )
+    bot_request_timeout_seconds: int = Field(
+        default=20,
+        alias="BOT_REQUEST_TIMEOUT_SECONDS",
+        ge=1,
+        le=120,
     )
     bot_name: str = Field(default="OpenClaw Bot", alias="BOT_NAME")
 

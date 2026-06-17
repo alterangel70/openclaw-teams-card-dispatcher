@@ -40,10 +40,11 @@ class AdaptiveCardDispatch(Base):
 
 	id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 	correlation_id: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
-	team_id: Mapped[str] = mapped_column(String(128), nullable=False)
-	channel_id: Mapped[str] = mapped_column(String(128), nullable=False)
-	conversation_id: Mapped[str] = mapped_column(String(128), nullable=False)
-	reply_to_message_id: Mapped[str] = mapped_column(String(128), nullable=False)
+	conversation_type: Mapped[str] = mapped_column(String(16), nullable=False, default="channel")
+	team_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+	channel_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+	conversation_id: Mapped[str] = mapped_column(String(512), nullable=False)
+	reply_to_message_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
 	adaptive_card_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
 	status: Mapped[DispatchStatus] = mapped_column(
 		Enum(DispatchStatus, name="dispatch_status"),

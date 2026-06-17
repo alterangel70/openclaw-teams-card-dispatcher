@@ -66,3 +66,17 @@ def test_configure_logging_adds_seq_handler_when_seq_enabled() -> None:
 
     assert log_to_seq_mock.called
     assert any(handler is seq_handler for handler in root_logger.handlers)
+
+
+def test_configure_logging_routes_uvicorn_loggers_to_root() -> None:
+    root_logger = logging.getLogger()
+    for handler in list(root_logger.handlers):
+        root_logger.removeHandler(handler)
+
+    settings = Settings()
+    configure_logging(settings)
+
+    for logger_name in ("uvicorn", "uvicorn.error", "uvicorn.access", "fastapi"):
+        logger = logging.getLogger(logger_name)
+        assert logger.propagate is True
+        assert logger.handlers == []

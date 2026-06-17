@@ -37,7 +37,7 @@ This repository currently includes the baseline implementation:
    - `cp .env.example .env`
 2. Start services:
    - `docker compose up --build`
-3. Check health endpoint:
+3. Optional manual check of health endpoint:
    - `curl http://localhost:8000/health`
 
 ## Bot Configuration
@@ -106,5 +106,25 @@ scripts/validate_runtime.sh \
 Checklist and evidence template:
 - `docs/runtime-validation-checklist.md`
 
-## Next Phases
-- Runtime validation and container hardening
+## Operational Limits
+Recommended starting values:
+- `WORKER_POLL_INTERVAL_SECONDS=5`
+- `WORKER_BATCH_SIZE=50`
+- `MAX_RETRIES=3`
+- `BOT_REQUEST_TIMEOUT_SECONDS=20`
+
+Tuning notes:
+- Reduce `WORKER_POLL_INTERVAL_SECONDS` for lower latency at the cost of more DB polling.
+- Increase `WORKER_BATCH_SIZE` only if worker CPU/network usage is healthy.
+- Keep `MAX_RETRIES` conservative to avoid retry storms during upstream incidents.
+- Increase `BOT_REQUEST_TIMEOUT_SECONDS` only for consistently slow connector responses.
+
+## Operations Runbook
+- Recovery and troubleshooting guide: `docs/operations-runbook.md`
+
+## CI Guardrails
+CI runs on push and pull requests with the following gates:
+- `quality-gates`: Ruff + Python compile checks
+- `unit-tests`: pytest without integration marker on Python 3.11/3.12
+- `integration-tests`: PostgreSQL-backed integration suite with Alembic migration
+- `container-build`: Docker image build verification

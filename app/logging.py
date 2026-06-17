@@ -12,6 +12,14 @@ import seqlog
 from app.config import Settings
 
 
+_FRAMEWORK_LOGGERS = (
+    "uvicorn",
+    "uvicorn.error",
+    "uvicorn.access",
+    "fastapi",
+)
+
+
 class JsonFormatter(logging.Formatter):
     """Format log records as newline-delimited JSON."""
 
@@ -78,6 +86,12 @@ def configure_logging(settings: Settings) -> None:
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(JsonFormatter())
     root_logger.addHandler(console_handler)
+
+    # Ensure framework loggers propagate to root, so all events use the same sinks.
+    for logger_name in _FRAMEWORK_LOGGERS:
+        framework_logger = logging.getLogger(logger_name)
+        framework_logger.handlers = []
+        framework_logger.propagate = True
 
     if settings.seq_url:
         seq_handler = seqlog.log_to_seq(

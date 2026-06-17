@@ -38,6 +38,28 @@ def install_signal_handlers(runtime: WorkerRuntime) -> None:
     signal.signal(signal.SIGTERM, _stop_worker)
 
 
+def log_cycle_result(processed_count: int) -> None:
+    """Emit worker cycle logs without flooding INFO when there is no work."""
+
+    if processed_count > 0:
+        logger.info(
+            "Worker cycle complete",
+            extra={
+                "processed_count": processed_count,
+                "correlation_id": "worker",
+            },
+        )
+        return
+
+    logger.debug(
+        "Worker cycle idle",
+        extra={
+            "processed_count": processed_count,
+            "correlation_id": "worker",
+        },
+    )
+
+
 def run_dispatch_worker(settings: Settings) -> None:
     """Run worker polling loop and process pending dispatches in sequential batches."""
 
@@ -49,6 +71,7 @@ def run_dispatch_worker(settings: Settings) -> None:
         service_url=settings.teams_service_url,
         bot_app_id=settings.bot_app_id,
         bot_name=settings.bot_name,
+        timeout_seconds=settings.bot_request_timeout_seconds,
     )
     repository = DispatchRepository()
 
@@ -71,13 +94,7 @@ def run_dispatch_worker(settings: Settings) -> None:
                     max_retries=settings.max_retries,
                 )
                 processed_count = service.process_pending_batch(batch_size=settings.worker_batch_size)
-                logger.info(
-                    "Worker cycle complete",
-                    extra={
-                        "processed_count": processed_count,
-                        "correlation_id": "worker",
-                    },
-                )
+                log_cycle_result(processed_count)
         except Exception as exc:
             logger.exception(
                 "Worker cycle failed",

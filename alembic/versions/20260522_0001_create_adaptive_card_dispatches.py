@@ -16,7 +16,7 @@ depends_on = None
 def upgrade() -> None:
     """Create dispatch status enum and adaptive card dispatches table."""
 
-    dispatch_status = sa.Enum(
+    dispatch_status = postgresql.ENUM(
         "PENDING",
         "PROCESSING",
         "SENT",
@@ -24,6 +24,15 @@ def upgrade() -> None:
         name="dispatch_status",
     )
     dispatch_status.create(op.get_bind(), checkfirst=True)
+
+    dispatch_status_column = postgresql.ENUM(
+        "PENDING",
+        "PROCESSING",
+        "SENT",
+        "FAILED",
+        name="dispatch_status",
+        create_type=False,
+    )
 
     op.create_table(
         "adaptive_card_dispatches",
@@ -33,7 +42,7 @@ def upgrade() -> None:
         sa.Column("channel_id", sa.String(length=128), nullable=False),
         sa.Column("reply_to_message_id", sa.String(length=128), nullable=False),
         sa.Column("adaptive_card_json", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-        sa.Column("status", dispatch_status, nullable=False),
+        sa.Column("status", dispatch_status_column, nullable=False),
         sa.Column("retry_count", sa.Integer(), nullable=False, server_default=sa.text("0")),
         sa.Column("last_error", sa.Text(), nullable=True),
         sa.Column("graph_message_id", sa.String(length=128), nullable=True),
@@ -63,7 +72,7 @@ def downgrade() -> None:
     op.drop_index("ix_adaptive_card_dispatches_status_next_attempt_at", table_name="adaptive_card_dispatches")
     op.drop_table("adaptive_card_dispatches")
 
-    dispatch_status = sa.Enum(
+    dispatch_status = postgresql.ENUM(
         "PENDING",
         "PROCESSING",
         "SENT",

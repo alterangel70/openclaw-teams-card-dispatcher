@@ -22,10 +22,11 @@ class DeliveryClient(Protocol):
     def send_adaptive_card(
         self,
         *,
-        team_id: str,
-        channel_id: str,
+        conversation_type: str,
         conversation_id: str,
-        reply_to_message_id: str,
         adaptive_card: dict,
+        team_id: str | None = None,
+        channel_id: str | None = None,
+        reply_to_message_id: str | None = None,
     ) -> DeliveryResult:
         """Send adaptive card and return a normalized delivery result."""

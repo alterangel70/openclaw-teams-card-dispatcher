@@ -12,13 +12,14 @@ from app.services.dispatch_service import DispatchProcessingService, calculate_r
 class FakeDispatch:
     id: int
     correlation_id: str
-    team_id: str
-    channel_id: str
+    conversation_type: str
     conversation_id: str
-    reply_to_message_id: str
     adaptive_card_json: dict
     status: DispatchStatus
     retry_count: int
+    team_id: str | None = None
+    channel_id: str | None = None
+    reply_to_message_id: str | None = None
     last_error: str | None = None
     graph_message_id: str | None = None
     next_attempt_at: datetime | None = None
@@ -100,10 +101,11 @@ class FailureDeliveryClient:
         return DeliveryResult(success=False, error_message="Delivery failed", retriable=self._retriable)
 
 
-def _pending_dispatch(retry_count: int = 0) -> FakeDispatch:
+def _pending_channel_dispatch(retry_count: int = 0) -> FakeDispatch:
     return FakeDispatch(
         id=1,
         correlation_id="corr-1",
+        conversation_type="channel",
         team_id="team-1",
         channel_id="channel-1",
         conversation_id="conversation-1",
@@ -114,8 +116,24 @@ def _pending_dispatch(retry_count: int = 0) -> FakeDispatch:
     )
 
 
+def _pending_dm_dispatch(retry_count: int = 0) -> FakeDispatch:
+    return FakeDispatch(
+        id=2,
+        correlation_id="corr-dm-1",
+        conversation_type="dm",
+        conversation_id="8:orgid:user-aad-object-id",
+        adaptive_card_json={"type": "AdaptiveCard", "version": "1.4"},
+        status=DispatchStatus.PENDING,
+        retry_count=retry_count,
+    )
+
+
+# Keep old name as alias so tests that import it externally don't break.
+_pending_dispatch = _pending_channel_dispatch
+
+
 def test_process_pending_batch_marks_sent_on_success() -> None:
-    dispatch = _pending_dispatch()
+    dispatch = _pending_channel_dispatch()
     session = FakeSession()
     repository = FakeRepository([dispatch])
     service = DispatchProcessingService(
@@ -133,8 +151,26 @@ def test_process_pending_batch_marks_sent_on_success() -> None:
     assert dispatch.sent_at is not None
 
 
+def test_process_pending_batch_marks_sent_for_dm_dispatch() -> None:
+    dispatch = _pending_dm_dispatch()
+    session = FakeSession()
+    repository = FakeRepository([dispatch])
+    service = DispatchProcessingService(
+        session,
+        repository,
+        delivery_client=SuccessDeliveryClient(),
+        max_retries=3,
+    )
+
+    processed = service.process_pending_batch(batch_size=10)
+
+    assert processed == 1
+    assert dispatch.status == DispatchStatus.SENT
+    assert dispatch.graph_message_id == "activity-1"
+
+
 def test_process_pending_batch_retries_when_failure_and_retries_left() -> None:
-    dispatch = _pending_dispatch(retry_count=1)
+    dispatch = _pending_channel_dispatch(retry_count=1)
     session = FakeSession()
     repository = FakeRepository([dispatch])
     service = DispatchProcessingService(
@@ -155,7 +191,7 @@ def test_process_pending_batch_retries_when_failure_and_retries_left() -> None:
 
 
 def test_process_pending_batch_marks_failed_at_max_retries() -> None:
-    dispatch = _pending_dispatch(retry_count=2)
+    dispatch = _pending_channel_dispatch(retry_count=2)
     session = FakeSession()
     repository = FakeRepository([dispatch])
     service = DispatchProcessingService(

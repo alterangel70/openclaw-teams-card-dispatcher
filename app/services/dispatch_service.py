@@ -45,6 +45,7 @@ class DispatchService:
             created = self._repository.create_pending_dispatch(
                 self._session,
                 correlation_id=payload.correlation_id,
+                conversation_type=payload.conversation_type,
                 team_id=payload.team_id,
                 channel_id=payload.channel_id,
                 conversation_id=payload.conversation_id,
@@ -123,6 +124,7 @@ class DispatchProcessingService:
             )
 
             result = self._delivery_client.send_adaptive_card(
+                conversation_type=dispatch.conversation_type,
                 team_id=dispatch.team_id,
                 channel_id=dispatch.channel_id,
                 conversation_id=dispatch.conversation_id,
@@ -169,7 +171,7 @@ class DispatchProcessingService:
             return
 
         next_retry_count = refreshed.retry_count + 1
-        should_fail = next_retry_count >= self._max_retries
+        should_fail = (not retriable) or next_retry_count >= self._max_retries
         if should_fail:
             self._repository.mark_failed(
                 refreshed,
