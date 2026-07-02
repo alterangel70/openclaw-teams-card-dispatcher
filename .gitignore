@@ -40,3 +40,6 @@ dist/
 
 # Docker
 docker-compose.override.yml
+
+# Local docker-compose backups
+docker-compose.yml.bak-*

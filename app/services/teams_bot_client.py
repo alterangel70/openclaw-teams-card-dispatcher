@@ -169,15 +169,22 @@ class TeamsBotClient:
         """POST adaptive card as a thread reply to an existing Teams activity."""
 
         token = self._token_provider.get_access_token()
-        # The conversation_id already encodes the thread via its ;messageid=xxx
-        # suffix.  Using that as the conversation endpoint (without a trailing
-        # activity-id path segment) is the correct Teams Bot Framework pattern
-        # for posting a reply into an existing channel thread.
-        url = f"{self._service_url}/v3/conversations/{conversation_id}/activities"
+
+        # Teams channel thread replies require the conversation endpoint to include
+        # the target message id as a ;messageid= suffix. Some callers pass only the
+        # channel conversation id, so make this robust here.
+        effective_conversation_id = conversation_id
+        if effective_conversation_id.startswith("conversation:"):
+            effective_conversation_id = effective_conversation_id[len("conversation:"):]
+
+        if ";messageid=" not in effective_conversation_id:
+            effective_conversation_id = f"{effective_conversation_id};messageid={reply_to_message_id}"
+
+        url = f"{self._service_url}/v3/conversations/{effective_conversation_id}/activities"
         payload = self.build_channel_activity_payload(
             team_id=team_id,
             channel_id=channel_id,
-            conversation_id=conversation_id,
+            conversation_id=effective_conversation_id,
             reply_to_message_id=reply_to_message_id,
             adaptive_card=adaptive_card,
         )
